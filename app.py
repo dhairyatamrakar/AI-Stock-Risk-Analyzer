@@ -132,12 +132,12 @@ if analyze:
                 # --------- TAB 3: ABOUT ---------
                 with tab3:
                     st.markdown("""
-### 📌 About This Project
+###  About This Project
 
 **AI Stock Risk Analyzer** is a decision-support tool that helps investors
 understand the **risk level** of a stock using historical price data.
 
-#### 🔍 Key Features
+####  Key Features
 - Automatic stock data fetching  
 - Professional candlestick charts  
 - Volatility-based risk analysis  
@@ -150,3 +150,4 @@ It does **not** provide financial advice or predict future prices.
 
     except Exception:
         st.error("Unexpected error occurred. Please try again.")
+
