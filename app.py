@@ -1,7 +1,10 @@
 import streamlit as st
 import plotly.graph_objects as go
+
 from data_fetcher import get_stock_data
 from risk_engine import calculate_volatility, classify_risk
+from stock_search import search_stocks
+
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -38,34 +41,50 @@ st.markdown(
 )
 st.markdown("---")
 
-# ---------------- SIDEBAR ----------------
+
+# ---------------- SIDEBAR : SMART SEARCH ----------------
 st.sidebar.header("🔍 Stock Search")
-symbol = st.sidebar.text_input(
-    "Enter FULL Stock Symbol",
-    placeholder="RELIANCE.NS | TCS.NS | AAPL | MSFT"
+
+query = st.sidebar.text_input(
+    "Search stock (name or symbol)",
+    placeholder="Reliance, TCS, Apple, AAPL"
 )
+
+# Fetch matching stocks from Yahoo Finance
+options = search_stocks(query)
+
+selected_stock = None
+if options:
+    selected_stock = st.sidebar.selectbox(
+        "Matching Results",
+        options
+    )
+
 analyze = st.sidebar.button("🚀 Analyze Stock")
 
-# ---------------- MAIN LOGIC ----------------
-if analyze:
-    try:
-        symbol = symbol.upper().strip()
 
-        if symbol == "":
-            st.warning("Please enter a stock symbol.")
-        else:
-            data = get_stock_data(symbol)
+# ---------------- MAIN LOGIC ----------------
+if analyze or selected_stock:
+    if not selected_stock:
+        st.warning("Please select a stock from the suggestions.")
+    else:
+        try:
+            # Extract symbol from "SYMBOL — Company Name"
+            symbol = selected_stock.split(" — ")[0]
+
+            with st.spinner("Fetching market data..."):
+                data = get_stock_data(symbol)
 
             if data.empty:
-                st.error("No data found. Please check the stock symbol.")
+                st.error("No data available for this stock.")
             else:
                 st.caption(f"Analyzing symbol: **{symbol}**")
 
-                # --------- AI CALCULATION ---------
+                # ---------------- AI CALCULATION ----------------
                 volatility = calculate_volatility(data)
                 risk = classify_risk(volatility)
 
-                # --------- METRICS ---------
+                # ---------------- METRICS ----------------
                 col1, col2, col3 = st.columns(3)
 
                 col1.metric("Risk Level", risk)
@@ -74,12 +93,12 @@ if analyze:
 
                 st.markdown("---")
 
-                # --------- TABS ---------
+                # ---------------- TABS ----------------
                 tab1, tab2, tab3 = st.tabs(
                     ["📊 Price Chart", "🤖 Risk Analysis", "ℹ️ About"]
                 )
 
-                # --------- TAB 1: CANDLESTICK ---------
+                # -------- TAB 1: CANDLESTICK CHART --------
                 with tab1:
                     st.subheader("📊 Candlestick Chart")
 
@@ -106,48 +125,47 @@ if analyze:
 
                     st.plotly_chart(fig, use_container_width=True)
 
-                # --------- TAB 2: RISK ---------
+                # -------- TAB 2: AI RISK EXPLANATION --------
                 with tab2:
                     st.subheader("🤖 AI Risk Assessment")
 
                     if risk == "Low Risk":
                         st.success(
-                            "🟢 Low Risk Stock\n\n"
-                            "This stock shows relatively stable price movement "
-                            "and may be suitable for cautious investors."
+                            "🟢 **Low Risk Stock**\n\n"
+                            "The price movement is relatively stable, indicating "
+                            "lower volatility compared to most stocks."
                         )
                     elif risk == "Medium Risk":
                         st.warning(
-                            "🟠 Medium Risk Stock\n\n"
-                            "This stock shows moderate volatility. "
+                            "🟠 **Medium Risk Stock**\n\n"
+                            "The stock shows moderate volatility. "
                             "Risk management strategies are recommended."
                         )
                     else:
                         st.error(
-                            "🔴 High Risk Stock\n\n"
-                            "This stock is highly volatile and may not be "
-                            "suitable for beginners."
+                            "🔴 **High Risk Stock**\n\n"
+                            "The stock is highly volatile and may not be suitable "
+                            "for beginners."
                         )
 
-                # --------- TAB 3: ABOUT ---------
+                # -------- TAB 3: ABOUT --------
                 with tab3:
                     st.markdown("""
-###  About This Project
+### 📌 About This Application
 
-**AI Stock Risk Analyzer** is a decision-support tool that helps investors
-understand the **risk level** of a stock using historical price data.
+**AI Stock Risk Analyzer** is a decision-support tool designed to help users
+understand **stock market risk** using historical price data.
 
-####  Key Features
-- Automatic stock data fetching  
+#### 🔍 Key Features
+- Smart stock search with autocomplete  
+- Real-time data from Yahoo Finance  
 - Professional candlestick charts  
-- Volatility-based risk analysis  
-- Clean, fintech-style UI  
+- Volatility-based, explainable AI logic  
 
 ⚠️ **Disclaimer**  
-This application is for **educational and analysis purposes only**.
+This application is for **educational and analytical purposes only**.  
 It does **not** provide financial advice or predict future prices.
                     """)
 
-    except Exception:
-        st.error("Unexpected error occurred. Please try again.")
-
+        except Exception:
+            st.error("An unexpected error occurred. Please try again.")
